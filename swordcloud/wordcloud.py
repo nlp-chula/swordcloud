@@ -30,7 +30,7 @@ from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 
 from query_integral_image import query_integral_image
 from tokenization import process_tokens, unigrams_and_bigrams, word_tokenize
-from processing import plot_TSNE, embed_w2v
+from processing import plot_TSNE, embed_w2v, generate_kmeans_frequencies
 
 FILE = os.path.dirname(__file__)
 # FONT_PATH = os.environ.get('FONT_PATH', os.path.join(FILE, 'DroidSansMono.ttf'))
@@ -1116,45 +1116,12 @@ class WordCloud(object):
         return Image.fromarray(ret)
 
 
-
-def generate_cluster_by_kmeans(focus_model, NUM_CLUSTERS, size_min, size_max):
-    X = focus_model[focus_model.key_to_index]
-    clf = KMeansConstrained(
-        n_clusters=NUM_CLUSTERS,
-        size_min=size_min,
-        size_max=size_max,
-        random_state=0
-    )
-    clf.fit_predict(X)
-    clf.cluster_centers_
-    grouped = clf.labels_.tolist()
-    return grouped
-
-
-def generate_kmeans_frequencies(wordlist, word_count, focus_model, NUM_CLUSTERS, size_min, size_max):
-    df = pd.DataFrame(data={'word': wordlist, 'cluster': generate_cluster_by_kmeans(focus_model,NUM_CLUSTERS,size_min,size_max)})
-    df['word_count'] = df['word'].map(word_count)
-    k_means_freq = []
-    for i in range(NUM_CLUSTERS):
-        clus_i = df.loc[df['cluster'] == i]
-        clus_i['total'] = clus_i['word_count'].sum()
-        clus_i_dict = {}
-        for _, row in clus_i.iterrows():
-            clus_i_dict[row['word']] = row['word_count']/row['total']
-        sorted_dict_i = sorted(clus_i_dict.items(), key=lambda item: item[1],reverse=True)[:10]
-        # print(sorted_dict_i)
-        lst = []
-        for k,v in sorted_dict_i:
-            lst.append((k,v))
-        k_means_freq.append((i,lst))
-    return k_means_freq
-
-def generate_kmeans_cloud(font_path, freq, max_font, fix_width, fix_height):
+def generate_kmeans_cloud(freq, max_font, fix_width, fix_height, font_path=None):
     lis = []
     topics = freq
     clouds = []
     for i in range(6):
-        cloud = WordCloud(font_path = font_path,
+        cloud = WordCloud(font_path=font_path,
                         background_color='white',
                         width=fix_width,
                         height=fix_height,

@@ -17,6 +17,8 @@ import gensim.downloader as api
 #embedding TH
 from pythainlp import word_vector
 
+from k_means_constrained import KMeansConstrained
+
 
 def embed_w2v(word_counts, lang='TH'):
     """
@@ -113,5 +115,51 @@ def plot_TSNE(model,labels=None, lang='TH'):
     
     return dic
 
+def generate_cluster_by_kmeans(model, NUM_CLUSTERS, size_min, size_max):
+
+    X = list(map(lambda x: x[1], model))
+    clf = KMeansConstrained(
+        n_clusters=NUM_CLUSTERS,
+        size_min=size_min,
+        size_max=size_max,
+        random_state=0
+    )
+    clf.fit_predict(X)
+    clf.cluster_centers_
+    grouped = clf.labels_.tolist()
+    
+    return grouped
+
+def generate_kmeans_frequencies(model, label, word_count, NUM_CLUSTERS, size_min, size_max):
+    df = pd.DataFrame(data={'word': label, 'cluster': generate_cluster_by_kmeans(model,NUM_CLUSTERS,size_min,size_max)})
+    df['word_count'] = df['word'].map(word_count)
+    k_means_freq = []
+    
+    for i in range(NUM_CLUSTERS):
+        clus_i = df.loc[df['cluster'] == i]
+        clus_i['total'] = clus_i['word_count'].sum()
+        clus_i_dict = {}
+        for _, row in clus_i.iterrows():
+            clus_i_dict[row['word']] = row['word_count']/row['total']
+        sorted_dict_i = sorted(clus_i_dict.items(), key=lambda item: item[1],reverse=True)[:10]
+
+        lst = []
+        for k,v in sorted_dict_i:
+            lst.append((k,v))
+        k_means_freq.append((i,lst))
+    return k_means_freq
 
     
+def rank_kmeans(kmeans_freq, rank_type='big'):
+    if rank_type=='near':
+        val = [1.0, 0.8, 0.6, 0.5, 0.4]
+#     elif rank_type== 'big':
+#         val = [1.0, 0.5, 0.25, 0.125, 0.1]
+    else:
+        val = [1.0, 0.5, 0.25, 0.125, 0.1]
+    
+    rank = {}
+    for _,lst in kmeans_freq:
+        rank.update(dict((tup[0], val[j]) if j < 4 else (tup[0], val[4]) for j,tup in enumerate(lst)))
+        
+    return rank

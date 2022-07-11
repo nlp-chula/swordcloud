@@ -6,7 +6,6 @@ LONG_DESCRIPTION = 't-SNE and word embedding models for rearranging wordcloud'
 
 # Setting up
 setup(
-       # the name must match the folder name 'verysimplemodule'
         name="swordcloud", 
         version=VERSION,
         author="Attapol Thamrongrattanarit",
@@ -14,7 +13,7 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=[], # add any additional packages that 
+        install_requires=['numpy>=1.6.1', 'pillow', 'matplotlib>=1.5.3', 'gensim', 'pandas', 'pythainlp', 'k_means_constrained'], # add any additional packages that 
         # needs to be installed along with your package. Eg: 'caer'
         keywords=['python', 'word cloud'],
         classifiers= [
