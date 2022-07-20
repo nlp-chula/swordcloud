@@ -341,7 +341,7 @@ class WordCloud(object):
                  relative_scaling='auto', regexp=None, collocations=True,
                  colormap=None, normalize_plurals=True, contour_width=0,
                  contour_color='black', repeat=False,
-                 include_numbers=False, min_word_length=0, collocation_threshold=30):
+                 include_numbers=False, min_word_length=0, collocation_threshold=30, language='TH'):
         if font_path is None:
             font_path = FONT_PATH
         if color_func is None and colormap is None:
@@ -374,6 +374,7 @@ class WordCloud(object):
         self.background_color = background_color
         self.max_font_size = max_font_size
         self.mode = mode
+        self.language = language
 
         if relative_scaling == "auto":
             if repeat:
@@ -400,7 +401,7 @@ class WordCloud(object):
             self.width = mask.shape[1]
             self.height = mask.shape[0]
 
-    def fit_words(self, frequencies, lang='TH'):
+    def fit_words(self, frequencies):
         """Create a word_cloud from words and frequencies.
 
         Alias to generate_from_frequencies.
@@ -414,9 +415,9 @@ class WordCloud(object):
         -------
         self
         """
-        return self.generate_from_frequencies(frequencies, lang=lang)
+        return self.generate_from_frequencies(frequencies)
 
-    def generate_from_frequencies(self, frequencies, max_font_size=None, tsne_plot=None, lang='TH'):  # noqa: C901
+    def generate_from_frequencies(self, frequencies, max_font_size=None, tsne_plot=None):  # noqa: C901
         """Create a word_cloud from words and frequencies.
 
         Parameters
@@ -435,7 +436,7 @@ class WordCloud(object):
         
         ## edit
         if tsne_plot == None:
-            tsne_plot = plot_TSNE(embed_w2v(frequencies,lang=lang), lang=lang)
+            tsne_plot = plot_TSNE(embed_w2v(frequencies,lang=self.language), lang=self.language)
         
         maxX = 0
         maxY = 0
@@ -492,7 +493,7 @@ class WordCloud(object):
                 font_size = self.height
             else:
                 self.generate_from_frequencies(dict(frequencies[:2]),
-                                               max_font_size=self.height, lang=lang)
+                                               max_font_size=self.height)
                 # find font sizes
                 sizes = [x[1] for x in self.layout_]
                 try:
@@ -622,7 +623,7 @@ class WordCloud(object):
         
         return self
 
-    def process_text(self, text, lang='TH', most_common=60):
+    def process_text(self, text, most_common=60):
         """Tokenization, a.k.a. splits a long text into words, eliminates the stopwords.
 
         Parameters
@@ -641,7 +642,7 @@ class WordCloud(object):
         include all those things.
         """
 
-        if lang == 'TH':
+        if self.language == 'TH':
             stopwords = set([i for i in self.stopwordsth])
             if type(text) is str:
                 words = word_tokenize(text)
@@ -653,7 +654,7 @@ class WordCloud(object):
             word_counter = Counter(words).most_common(most_common)
             word_counts = dict(word_counter)
 
-        elif lang == 'EN':
+        elif self.language == 'EN':
 
             flags = (re.UNICODE if sys.version < '3' and type(text) is unicode  # noqa: F821
                     else 0)
@@ -681,7 +682,7 @@ class WordCloud(object):
 
         return word_counts
 
-    def generate_from_text(self, text, lang='TH', tsne_plot=None):
+    def generate_from_text(self, text, tsne_plot=None):
         """Generate wordcloud from text.
 
         The input "text" is expected to be a natural text. If you pass a sorted
@@ -693,12 +694,12 @@ class WordCloud(object):
         -------
         self
         """
-        words = self.process_text(text, lang)
+        words = self.process_text(text)
         ###
-        self.generate_from_frequencies(words, tsne_plot, lang=lang)
+        self.generate_from_frequencies(words, tsne_plot)
         return self
 
-    def generate(self, text, lang='TH', tsne_plot=None):
+    def generate(self, text, tsne_plot=None):
         """Generate wordcloud from text.
 
         The input "text" is expected to be a natural text. If you pass a sorted
@@ -713,7 +714,7 @@ class WordCloud(object):
         -------
         self
         """
-        return self.generate_from_text(text, lang, tsne_plot)
+        return self.generate_from_text(text, tsne_plot)
 
     def _check_generated(self):
         """Check if ``layout_`` was computed, otherwise raise error."""

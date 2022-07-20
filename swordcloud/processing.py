@@ -115,7 +115,7 @@ def plot_TSNE(model,labels=None, lang='TH'):
     
     return dic
 
-def generate_cluster_by_kmeans(model, NUM_CLUSTERS, size_min, size_max):
+def kmeans_cluster(model, NUM_CLUSTERS, size_min, size_max):
 
     X = list(map(lambda x: x[1], model))
     clf = KMeansConstrained(
@@ -125,13 +125,33 @@ def generate_cluster_by_kmeans(model, NUM_CLUSTERS, size_min, size_max):
         random_state=0
     )
     clf.fit_predict(X)
-    clf.cluster_centers_
+    # clf.cluster_centers_
     grouped = clf.labels_.tolist()
     
     return grouped
 
-def generate_kmeans_frequencies(model, label, word_count, NUM_CLUSTERS, size_min, size_max):
-    df = pd.DataFrame(data={'word': label, 'cluster': generate_cluster_by_kmeans(model,NUM_CLUSTERS,size_min,size_max)})
+def generate_kmeans_frequencies(model, word_count, NUM_CLUSTERS, size_min, size_max, label=None):
+    """
+    Parameters
+    ----------
+    model : gensim.models.KeyedVector or list of tuple of (str, list[str])
+        word vector model (must come with 'labels') or list of tuple of word and word vectors (no 'labels' needed)
+
+    label : list of str (optional)
+        words that we focused on; only in case of the 'model' is a whole word vector model.
+    
+    Returns
+    -------
+    Dict from str to tuple of floats, contains coordinates of words.
+    """
+
+    if label is None:
+      label = list(map(lambda x: x[0], model))
+    #   tokens = list(map(lambda x: x[1], model))
+    # else:
+    #   tokens = [model[word] for word in labels]
+
+    df = pd.DataFrame(data={'word': label, 'cluster': kmeans_cluster(model,NUM_CLUSTERS,size_min,size_max)})
     df['word_count'] = df['word'].map(word_count)
     k_means_freq = []
     
@@ -147,6 +167,7 @@ def generate_kmeans_frequencies(model, label, word_count, NUM_CLUSTERS, size_min
         for k,v in sorted_dict_i:
             lst.append((k,v))
         k_means_freq.append((i,lst))
+
     return k_means_freq
 
     
