@@ -23,12 +23,18 @@ wn_wc = swc.WordCloud(background_color='white',
                      prefer_horizontal=1.0,
                      language='TH')
 
-wn_wc.generate_from_text(txt, kmeans=True)
+# 1.) t-SNE plotting
+wn_wc.generate_from_text(txt)
 
-# wn_wc_km.generate(txt, kmeans=True)
-
+# 1.1) for plot_now = None
+# wn_wc.generate_from_text(txt, plot_now=None)
 # plt.style.use('ggplot')
 # plt.figure(figsize=(9.6,4.8))
 # plt.imshow(wn_wc,interpolation="bilinear")
 # plt.axis('off')
 # plt.show()
+
+# 2.) k-means plotting
+wn_wc.generate_from_text(txt, kmeans=True)
+
+

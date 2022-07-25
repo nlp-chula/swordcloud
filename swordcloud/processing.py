@@ -3,15 +3,7 @@ import math
 import pandas as pd
 from sklearn.manifold import TSNE
 
-# import matplotlib.pyplot as plt
-# plt.style.use('ggplot')
-# import matplotlib.font_manager as fm
-# import numpy as np
-
 #embedding EN
-# from gensim.models import KeyedVectors, word2vec
-# from gensim.scripts.glove2word2vec import glove2word2vec
-# from gensim.test.utils import datapath, get_tmpfile
 import gensim.downloader as api
 
 #embedding TH

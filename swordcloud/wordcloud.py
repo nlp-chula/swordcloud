@@ -738,7 +738,6 @@ class WordCloud(object):
         
         model = embed_w2v(words, lang=self.language)
         kmeans_freq = self.generate_kmeans_frequencies(model, words, NUM_CLUSTERS=6, size_min=10,size_max=12)
-        clus = kmeans_cluster(model)
 
         lis = []
         clouds = []
@@ -758,7 +757,6 @@ class WordCloud(object):
 
         for i, ax in enumerate(axes.flatten()):
             fig.add_subplot(ax)
-                
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
                 
             topic_words = dict(kmeans_freq[i][1]) #list of (words, freq)
