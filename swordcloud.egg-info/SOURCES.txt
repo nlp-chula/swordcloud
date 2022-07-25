@@ -1,0 +1,13 @@
+README.md
+setup.py
+swordcloud/__init__.py
+swordcloud/color_from_image.py
+swordcloud/processing.py
+swordcloud/query_integral_image.py
+swordcloud/tokenization.py
+swordcloud/wordcloud.py
+swordcloud.egg-info/PKG-INFO
+swordcloud.egg-info/SOURCES.txt
+swordcloud.egg-info/dependency_links.txt
+swordcloud.egg-info/requires.txt
+swordcloud.egg-info/top_level.txt
