@@ -9,7 +9,7 @@ pip install swordcloud
 this module requires Python 3, Numpy, Gensim 4.0 or later, PyThaiNLP, and Matplotlib
 
 ## Example
-After installing and importing, you can generate the word cloud as in [example/sample.py](https://github.com/nlp-chula/swordcloud/blob/main/swordcloud/example/sample.py) has instructed. Noted that the input text for `generate_fron_text()` can be only `str` or a list of `str` only.
+After installing and importing, you can generate the word cloud as in [example/sample.py](https://github.com/nlp-chula/swordcloud/blob/main/example/sample.py) has instructed. Noted that the input text for `generate_fron_text()` can be only `str` or a list of `str` only.
 
 <!-- The generated semantic word clouds look like these: (img) (img) -->
 
