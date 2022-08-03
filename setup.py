@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.0.3' 
+VERSION = '0.0.5' 
 DESCRIPTION = 'Semantic word cloud package for Thai and English'
 LONG_DESCRIPTION = 't-SNE and word embedding models for rearranging wordcloud'
 
@@ -12,7 +12,8 @@ setup(
         author_email="<profte@gmail.com>",
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
-        packages=find_packages(),
+        packages=['swordcloud'],
+        package_data={'swordcloud': ['stopwords', 'thstopwords', 'THSarabun.ttf']},
         install_requires=['numpy>=1.6.1', 'pillow', 'matplotlib>=1.5.3', 'gensim>=4.0.0', 'pandas', 'pythainlp', 'k_means_constrained', 'sklearn'], 
         keywords=['python', 'word cloud', 't-SNE', 'K-means'],
         classifiers= [

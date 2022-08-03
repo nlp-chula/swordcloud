@@ -1,9 +1,12 @@
 README.md
 setup.py
+swordcloud/THSarabun.ttf
 swordcloud/__init__.py
 swordcloud/color_from_image.py
 swordcloud/processing.py
 swordcloud/query_integral_image.py
+swordcloud/stopwords
+swordcloud/thstopwords
 swordcloud/tokenization.py
 swordcloud/wordcloud.py
 swordcloud.egg-info/PKG-INFO

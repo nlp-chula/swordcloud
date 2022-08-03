@@ -20,12 +20,10 @@ from random import Random
 from xml.sax import saxutils
 from collections import Counter
 
-import gensim
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from k_means_constrained import KMeansConstrained
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 
 from .query_integral_image import query_integral_image
@@ -537,14 +535,14 @@ class WordCloud(object):
                 # find possible places using integral image:
                 
                 ## edit
-                # if tsne_plot != None:
-                resu = tsne_plot[word]
-                to_mul_x = width/maxX
-                to_mul_y = height/maxY
-                fix_state = (to_mul_x*resu[0],to_mul_y*resu[1]) # x
-                result = occupancy.sample_position(box_size[1] + self.margin,
-                                                    box_size[0] + self.margin,
-                                                    fix_state)
+                if word in tsne_plot.keys():
+                    resu = tsne_plot[word]
+                    to_mul_x = width/maxX
+                    to_mul_y = height/maxY
+                    fix_state = (to_mul_x*resu[0],to_mul_y*resu[1]) # x
+                    result = occupancy.sample_position(box_size[1] + self.margin,
+                                                        box_size[0] + self.margin,
+                                                        fix_state)
                 # else:
                 #     result = occupancy.sample_position(box_size[1] + self.margin,
                 #                                        box_size[0] + self.margin,
@@ -693,7 +691,7 @@ class WordCloud(object):
         return self
 
 
-    def generate_kmeans_frequencies(self, model, word_count, label=None, NUM_CLUSTERS=6, size_min=10, size_max=12):
+    def gen_kmeans_frequencies(self, model, word_count, label=None, NUM_CLUSTERS=6, size_min=10, size_max=12):
         """
         Parameters
         ----------
@@ -737,22 +735,23 @@ class WordCloud(object):
     def generate_kmeans_cloud(self, words):
         
         model = embed_w2v(words, lang=self.language)
-        kmeans_freq = self.generate_kmeans_frequencies(model, words, NUM_CLUSTERS=6, size_min=10,size_max=12)
+        kmeans_freq = self.gen_kmeans_frequencies(model, words, NUM_CLUSTERS=6, size_min=None,size_max=12)
 
-        lis = []
         clouds = []
         for i in range(6):
             cloud = WordCloud(font_path=self.font_path,
-                            background_color='white',
+                            background_color=self.background_color,
                             width=self.width//3,
                             height=self.height//2,
                             max_words=20,
                             max_font_size=self.max_font_size,
-                            colormap='tab10',
-                            color_func=lambda *args, **kwargs: "black",
-                            prefer_horizontal=1.0)
+                            colormap=self.colormap,
+                            color_func=self.color_func,
+                            prefer_horizontal=1.0,
+                            language=self.language)
             clouds.append(cloud)
 
+        # Users have no choice but plotting now
         fig, axes = plt.subplots(2,3, figsize=(32,18), sharex=True, sharey=True)
 
         for i, ax in enumerate(axes.flatten()):
@@ -761,19 +760,15 @@ class WordCloud(object):
                 
             topic_words = dict(kmeans_freq[i][1]) #list of (words, freq)
             clouds[i].generate_from_frequencies(topic_words, plot_now=False) # set topic
-            lis.append(clouds[i])
-            print(f'generating cloud {i}')
+            # print(f'generating cloud {i}')
             plt.gca().imshow(clouds[i],aspect="auto",interpolation = "bilinear")  # blur it right here
             plt.gca().axis('off')
 
-        #Users have no choice but plotting now
         # plt.subplots_adjust(wspace=0, hspace=0)
-        # plt.axis('off')
         # plt.margins(x=0, y=0)
-        # plt.tight_layout()
-        # plt.figure(figsize=(32,18))
-        # plt.show()
-        return lis
+        plt.show()
+
+        return clouds
 
     def _check_generated(self):
         """Check if ``layout_`` was computed, otherwise raise error."""
