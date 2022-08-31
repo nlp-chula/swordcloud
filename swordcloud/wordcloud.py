@@ -404,7 +404,7 @@ class WordCloud(object):
 
         Parameters
         ----------
-        frequencies : dict from string to float
+        frequencies : dict {string: float}
             A contains words and associated frequency.
 
         max_font_size : int
@@ -604,7 +604,7 @@ class WordCloud(object):
         # print(collect_font_size)
         if plot_now:
             plt.style.use('ggplot')
-            plt.figure(figsize=(9.6,4.8))
+            plt.figure(figsize=(32,18))
             plt.imshow(self,interpolation="bilinear")
             plt.axis('off')
             plt.show()
@@ -732,10 +732,11 @@ class WordCloud(object):
         return k_means_freq
 
 
-    def generate_kmeans_cloud(self, words):
+    def generate_kmeans_cloud(self, freq):
         
-        model = embed_w2v(words, lang=self.language)
-        kmeans_freq = self.gen_kmeans_frequencies(model, words, NUM_CLUSTERS=6, size_min=None,size_max=12)
+        model = embed_w2v(freq, lang=self.language)
+        kmeans_freq = self.gen_kmeans_frequencies(model, freq, NUM_CLUSTERS=6, size_min=None,size_max=12)
+        print(kmeans_freq)
 
         clouds = []
         for i in range(6):
