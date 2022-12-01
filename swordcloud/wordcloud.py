@@ -722,7 +722,7 @@ class WordCloud(object):
             clus_i_dict = {}
             for _, row in clus_i.iterrows():
                 clus_i_dict[row['word']] = row['word_count']/row['total']
-            sorted_dict_i = sorted(clus_i_dict.items(), key=lambda item: item[1],reverse=True)[:10]
+            sorted_dict_i = sorted(clus_i_dict.items(), key=lambda item: item[1],reverse=True)
 
             lst = []
             for k,v in sorted_dict_i:
@@ -735,7 +735,7 @@ class WordCloud(object):
     def generate_kmeans_cloud(self, freq):
         
         model = embed_w2v(freq, lang=self.language)
-        kmeans_freq = self.gen_kmeans_frequencies(model, freq, NUM_CLUSTERS=6, size_min=None,size_max=12)
+        kmeans_freq = self.gen_kmeans_frequencies(model, freq, NUM_CLUSTERS=6, size_min=10,size_max=12)
         print(kmeans_freq)
 
         clouds = []

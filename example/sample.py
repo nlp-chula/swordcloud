@@ -12,7 +12,7 @@ import swordcloud as swc
 import pandas as pd
 
 # read data and convert to a compatible data type
-df = pd.read_csv('w_review_data.csv', names=['text'])
+df = pd.read_csv('example/w_review_data.csv', names=['text'])
 txt = list(df['text'][0:4000])
 
 # Create a word cloud object

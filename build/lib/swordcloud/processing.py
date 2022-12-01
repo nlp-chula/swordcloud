@@ -108,6 +108,22 @@ def plot_TSNE(model,labels=None, lang='TH'):
     return dic
 
 def kmeans_cluster(model, NUM_CLUSTERS=6, size_min=10, size_max=12):
+    """
+    Parameters
+    ----------
+    model : gensim.models.KeyedVector or list of tuple of (str, list[str])
+        word vector model (must come with 'labels') or list of tuple of word and word vectors (no 'labels' needed)
+
+    NUM_CLUSTERS : int (optional, default = 6)
+        words that we focused on; only in case of the 'model' is a whole word vector model.
+
+    lang : str, default = 'TH'
+        language of input words, can be 'TH' or 'EN'
+    
+    Returns
+    -------
+    Dict from str to tuple of floats, contains coordinates of words.
+    """
 
     X = list(map(lambda x: x[1], model))
     clf = KMeansConstrained(
@@ -117,7 +133,21 @@ def kmeans_cluster(model, NUM_CLUSTERS=6, size_min=10, size_max=12):
         random_state=0
     )
     clf.fit_predict(X)
-    # clf.cluster_centers_
+    clf.cluster_centers_
     grouped = clf.labels_.tolist()
     
     return grouped
+
+def rank_kmeans(kmeans_freq, rank_type='big'):
+    if rank_type=='near':
+        val = [1.0, 0.8, 0.6, 0.5, 0.4]
+    elif rank_type== 'big':
+        val = [1.0, 0.5, 0.25, 0.125, 0.1]
+    else:
+        val = [1, 1, 1, 1, 1]
+    
+    rank = {}
+    for _,lst in kmeans_freq:
+        rank.update(dict((tup[0], val[j]) if j < 4 else (tup[0], val[4]) for j,tup in enumerate(lst)))
+        
+    return rank

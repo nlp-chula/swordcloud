@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.0.7' 
+VERSION = '0.0.8' 
 DESCRIPTION = 'Semantic word cloud package for Thai and English'
 LONG_DESCRIPTION = 't-SNE and word embedding models for rearranging wordcloud'
 
