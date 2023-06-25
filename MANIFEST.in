@@ -1,0 +1,3 @@
+include src/swordcloud/stopwords
+include src/swordcloud/thstopwords
+include src/swordcloud/THSarabun.ttf

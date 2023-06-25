@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swordcloud"
+version = "0.0.9"
+description = "Semantic word cloud package for Thai and English"
+authors = [
+    {name = "Attapol Thamrongrattanarit", email = "profte@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows"
+]
+keywords = ["python", "word cloud", "t-SNE", "K-means"]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "pillow",
+    "matplotlib>=1.5.3",
+    "gensim>=4.0.0",
+    "pandas",
+    "pythainlp>=3.1.0",
+    "k_means_constrained",
+    "scikit-learn"
+]
+readme = "README.md"
+
+[project.optional-dependencies]
+embedfont = ["fonttools"]
+
+[project.urls]
+Homepage = "https://github.com/nlp-chula/swordcloud"
