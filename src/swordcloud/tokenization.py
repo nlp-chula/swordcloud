@@ -5,12 +5,12 @@ from pythainlp.util.trie import Trie
 from pythainlp.tokenize.newmm import segment
 from typing import Sequence, Iterable, Set, Dict, Optional
 
-
 def l(k: int, n: int, x: float):
-    # dunning's likelihood ratio with notation from
-    # http://nlp.stanford.edu/fsnlp/promo/colloc.pdf p162
+    """
+    dunning's likelihood ratio with notation from
+    http://nlp.stanford.edu/fsnlp/promo/colloc.pdf p162
+    """
     return log(max(x, 1e-10)) * k + log(max(1 - x, 1e-10)) * (n - k)
-
 
 def score(count_bigram: int, count1: int, count2: int, n_words: int):
     """Collocation score"""
@@ -27,23 +27,25 @@ def score(count_bigram: int, count1: int, count2: int, n_words: int):
     score = l(c12, c1, p) + l(c2 - c12, N - c1, p) - l(c12, c1, p1) - l(c2 - c12, N - c1, p2)
     return -2 * score
 
-
 def pairwise(iterable: Iterable[str]):
-    # from itertool recipies
-    # is -> (s0,s1), (s1,s2), (s2, s3), ...
+    """
+    from itertool recipies:
+    s -> (s0,s1), (s1,s2), (s2, s3), ...
+    """
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
-
 
 def unigrams_and_bigrams(
     words: Sequence[str],
     stopwords: Set[str],
     collocation_threshold: int,
 ):
-    # We must create the bigrams before removing the stopword tokens from the words, or else we get bigrams like
-    # "thank much" from "thank you very much".
-    # We don't allow any of the words in the bigram to be stopwords
+    """
+    We must create the bigrams before removing the stopword tokens from the words, or else we get bigrams like
+    "thank much" from "thank you very much".
+    We don't allow any of the words in the bigram to be stopwords
+    """
     bigrams = [p for p in pairwise(words) if not any(w.lower() in stopwords for w in p)]
     unigrams = [w for w in words if w.lower() not in stopwords]
     n_words = len(unigrams)
@@ -71,9 +73,9 @@ def unigrams_and_bigrams(
             del counts_unigrams[word]
     return counts_unigrams
 
-
 def process_tokens(words: Iterable[str], normalize_plurals: bool):
-    """Normalize cases and remove plurals.
+    """
+    Normalize cases and remove plurals.
 
     Each word is represented by the most common case.
     If a word appears with an "s" on the end and without an "s" on the end,
@@ -82,20 +84,16 @@ def process_tokens(words: Iterable[str], normalize_plurals: bool):
 
     Parameters
     ----------
-    words : iterable of strings
+    `words` : `Iterable[str]`
         Words to count.
-
-    normalize_plurals : bool, default=True
+    `normalize_plurals` : `bool`
         Whether to try and detect plurals and remove trailing "s".
 
     Returns
     -------
-    counts : dict from string to int
+    `counts` : `Counter[str]`
         Counts for each unique word, with cases represented by the most common
         case, and plurals removed.
-
-    standard_forms : dict from string to string
-        For each lower-case word the standard capitalization.
     """
     # words can be either a list of unigrams or bigrams
     # d is a dict of dicts.
@@ -127,22 +125,27 @@ def process_tokens(words: Iterable[str], normalize_plurals: bool):
         fused_cases[first] = sum(case_dict.values())
     return fused_cases
 
-
 def word_tokenize(text: str, custom_dict: Optional[Trie] = None, keep_whitespace: bool = False):
-
     """
     Word tokenizer.
     (override from PyThaiNLP.word_tokenize)
 
     Tokenizes running text into words (list of strings).
 
-    :param str text: text to be tokenized
+    Parameters
+    ----------
+    `text`: `str`
+        Text to be tokenized
+    `custom_dict`: `pythainlp.util.Trie` (default=None)
+        Dictionary trie
+    `keep_whitespace`: `bool` (default=False)
+        True to keep whitespaces, a common mark
+        for end of phrase in Thai.
+        Otherwise, whitespaces are omitted.
 
-    :param pythainlp.util.Trie custom_dict: dictionary trie
-    :param bool keep_whitespace: True to keep whitespaces, a common mark
-                                 for end of phrase in Thai.
-                                 Otherwise, whitespaces are omitted.
-    :return: list of words
+    Returns
+    -------
+    list of words: `list[str]`
     """
     if custom_dict is not None:
         segments = segment(text, custom_dict)

@@ -1,42 +1,10 @@
-import math
+from math import fabs
 import numpy as np
 from numpy.typing import NDArray
-from typing import Union, Dict, List, Tuple, Literal, Optional
+from typing import Union, List, Tuple, Literal, Optional
 from random import Random
 from sklearn.manifold import TSNE
-
-#embedding EN
-import gensim.downloader as api
-#embedding TH
-from pythainlp.word_vector import WordVector
-
 from k_means_constrained import KMeansConstrained
-
-
-def embed_w2v(
-    word_counts: Union[Dict[str, int], Dict[str, float]],
-    language: Literal['TH', 'EN']
-) -> List[Tuple[str, NDArray[np.float32]]]:
-    """
-    Parameters
-    ----------
-    word_counts : dict from str to int
-        contains words and associated frequency.
-
-    lang : str, default = 'TH'
-        language of input words, can be 'TH' or 'EN'
-    
-    Returns
-    -------
-    List of tuples of word and word vector ((str, list of float))
-    """
-    if language == 'TH':
-        model = WordVector().get_model()
-    else:
-        # model = api.load('glove-wiki-gigaword-300') # This one is too big. Takes too long to load.
-        model = api.load('glove-wiki-gigaword-50')
-
-    return [(word, model[word]) for word in word_counts if word in model]
 
 def plot_TSNE(
     model: List[Tuple[str, NDArray[np.float32]]],
@@ -46,22 +14,18 @@ def plot_TSNE(
     """
     Parameters
     ----------
-    model : gensim.models.KeyedVector or list of tuple of (str, list[foat])
-        word vector model (must come with 'labels') or list of tuple of word and word vectors (no 'labels' needed)
-
-    labels : list of str (optional)
-        words that we focused on; only in case of the 'model' is a whole word vector model.
-
-    lang : str, default = 'TH'
+    `model` : `list[tuple[str, NDArray[float32]]]`
+        list of tuple of word and its word vectors
+    `language` : `str`
         language of input words, can be 'TH' or 'EN'
+    `random_state` : `Random` | `int`, default = None
+        random state for TSNE model
     
     Returns
     -------
-    Dict from str to tuple of floats, contains coordinates of words.
+    `dict[str, tuple[float, float]]`, Coordinates of words in the TSNE plot
     """
-    if random_state is None:
-        random_state = Random()
-    elif isinstance(random_state, int):
+    if not isinstance(random_state, Random):
         random_state = Random(random_state)
 
     labels = list(map(lambda x: x[0], model))
@@ -79,7 +43,7 @@ def plot_TSNE(
             perplexity = min(7, max_possible_perplexity),
             early_exaggeration = 12,
             learning_rate = 210,
-            random_state = random_state.randint(0, 1000)
+            random_state = random_state.randint(0, 4294967295)
         )
     else:
         tsne_model = TSNE(
@@ -89,7 +53,7 @@ def plot_TSNE(
             perplexity = min(40, max_possible_perplexity),
             early_exaggeration = 12,
             learning_rate = 200,
-            random_state = random_state.randint(0, 1000)
+            random_state = random_state.randint(0, 4294967295)
         )
     
 
@@ -114,9 +78,9 @@ def plot_TSNE(
     x_fab = 0
     y_fab = 0
     if min_x <= 0:
-        x_fab = math.fabs(min_x)
+        x_fab = fabs(min_x)
     if min_y <= 0:
-        y_fab = math.fabs(min_y)
+        y_fab = fabs(min_y)
 
     for value in new_values:
         x.append(value[0] + x_fab)
@@ -134,22 +98,22 @@ def kmeans_cluster(
     """
     Parameters
     ----------
-    model : gensim.models.KeyedVector or list of tuple of (str, list[str])
-        word vector model (must come with 'labels') or list of tuple of word and word vectors (no 'labels' needed)
-
-    NUM_CLUSTERS : int (optional, default = 6)
-        words that we focused on; only in case of the 'model' is a whole word vector model.
-
-    lang : str, default = 'TH'
-        language of input words, can be 'TH' or 'EN'
+    `model` : `list[tuple[str, NDArray[float32]]]`
+        list of tuple of word and its word vectors
+    `n_clusters` : `int`
+        Number of clusters to form
+    `random_state` : `Random` | `int`, default = None
+        random state for KMeans model
+    `size_min` : `int`, default = 10
+        Minimum number of words in each cluster
+    `size_max` : `int`, default = 12
+        Maximum number of words in each cluster
     
     Returns
     -------
-    Dict from str to tuple of floats, contains coordinates of words.
+    `list[int]`, each integer is the cluster label of each word in the 'model'
     """
-    if random_state is None:
-        random_state = Random()
-    elif isinstance(random_state, int):
+    if not isinstance(random_state, Random):
         random_state = Random(random_state)
 
     X = list(map(lambda x: x[1], model))
@@ -157,7 +121,7 @@ def kmeans_cluster(
         n_clusters = n_clusters,
         size_min = min(size_min, len(X) // n_clusters), # floor division
         size_max = max(size_max, -(len(X) // -n_clusters)), # ceiling division
-        random_state = random_state.randint(0, 1000)
+        random_state = random_state.randint(0, 4294967295)
     )
     clf.fit_predict(X)
-    return clf.labels_.tolist()
+    return clf.labels_.tolist() # type: ignore

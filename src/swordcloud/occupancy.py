@@ -3,6 +3,16 @@ from numpy.typing import NDArray
 from typing import Tuple
 
 class IntegralOccupancyMap:
+    """
+    A class that keeps track of occupied areas in an image.
+
+    Parameters
+    ----------
+    `height` : `int`
+        Height of the image.
+    `width` : `int`
+        Width of the image.
+    """
     def __init__(self, height: int, width: int):
         self.height = height
         self.width = width
@@ -10,6 +20,22 @@ class IntegralOccupancyMap:
 
     @np.errstate(over='ignore')
     def sample_position(self, size_x: int, size_y: int, position: Tuple[float, float]):
+        """
+        Try to find a position for a rectangle of size (size_x, size_y) in the image.
+
+        Parameters
+        ----------
+        `size_x` : `int`
+            Size in X-axis.
+        `size_y` : `int`
+            Size in Y-axis.
+        `position` : `tuple[float, float]`
+            Position around which to sample.
+
+        Returns
+        -------
+        `tuple[float, float]` if found or `None` if not found
+        """
         integral_image = self.integral
 
         fix_x = round(position[1])
@@ -31,13 +57,27 @@ class IntegralOccupancyMap:
                     try:
                         area = integral_image[new_center_x, new_center_y] + integral_image[new_center_x + size_x, new_center_y + size_y]
                         area -= integral_image[new_center_x + size_x, new_center_y] + integral_image[new_center_x, new_center_y + size_y]
-                        if not area: # ถ้า not area --> size x < x or size y < y แสดงว่ามีพท แต่ถ้าสมมติมันใหญ่เกินก็ค่อยไปลด font size
+                        # ถ้า not area --> size x < x or size y < y แสดงว่ามีพท
+                        # แต่ถ้าสมมติมันใหญ่เกินก็ค่อยไปลด font size
+                        if not area:
                             return new_center_x, new_center_y
                     except IndexError:
                         continue
         return None
     
     def update(self, img_array: NDArray[np.uint32], pos_x: int, pos_y: int):
+        """
+        Update the occupancy map with a new rectangle.
+
+        Parameters
+        ----------
+        `img_array` : `NDArray`
+            Image array.
+        `pos_x` : `int`
+            Position in X-axis.
+        `pos_y` : `int`
+            Position in Y-axis.
+        """
         partial_integral = np.cumsum(np.cumsum(img_array[pos_x:, pos_y:], axis=1), axis=0)
         # paste recomputed part into old image
         # if x or y is zero it is a bit annoying

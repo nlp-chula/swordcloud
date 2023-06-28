@@ -6,92 +6,114 @@
 #
 # License: MIT
 
-import base64
-import io
-import os
 import re
+from base64 import b64encode
+from io import BytesIO
+from os import path, environ
 from operator import itemgetter
 from random import Random
 from xml.sax import saxutils
 from collections import Counter
 from math import sqrt, ceil
 from itertools import zip_longest
+from typing import Dict, Tuple, List, Set, Union, Optional, Literal
 
-import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.colors import Colormap
 import numpy as np
 from numpy.typing import NDArray
-from typing import Dict, Tuple, List, Set, Union, Optional, Literal
-import pandas as pd
+from pandas import DataFrame
 from PIL import Image, ImageDraw, ImageFont
 
-from .tokenization import process_tokens, unigrams_and_bigrams, word_tokenize
-from .processing import plot_TSNE, embed_w2v, kmeans_cluster
-from .occupancy import IntegralOccupancyMap
-from .color_func import ColorMapFunc, Color, ColorFunc
+from gensim.models import KeyedVectors
+import gensim.downloader as api
+from pythainlp.word_vector import WordVector
 
-FILE = os.path.dirname(__file__)
-DEFAULT_FONT_PATH = os.environ.get('FONT_PATH', os.path.join(FILE, 'THSarabun.ttf'))
-DEFAULT_EN_STOPWORDS = set(map(str.strip, open(os.path.join(FILE, 'stopwords'), "r", encoding="utf8")))
-DEFAULT_TH_STOPWORDS = set(map(str.strip, open(os.path.join(FILE, 'thstopwords'), "r", encoding="utf8")))
+from .tokenization import process_tokens, unigrams_and_bigrams, word_tokenize
+from .processing import plot_TSNE, kmeans_cluster
+from .occupancy import IntegralOccupancyMap
+from .color_func import RandomColorFunc, Color, ColorFunc
+
+FILE = path.dirname(__file__)
+DEFAULT_FONT_PATH = environ.get('FONT_PATH', path.join(FILE, 'THSarabun.ttf'))
+DEFAULT_EN_STOPWORDS = set(map(str.strip, open(path.join(FILE, 'stopwords'), encoding="utf8")))
+DEFAULT_TH_STOPWORDS = set(map(str.strip, open(path.join(FILE, 'thstopwords'), encoding="utf8")))
 
 class SemanticWordCloud:
     """
-    Word cloud object for generating and drawing.
+    Semantic word cloud object for generating and drawing.
 
     Parameters
     ----------
-    font_path : string
-        Font path to the font that will be used (OTF or TTF).
-        Defaults to DroidSansMono path on a Linux machine. If you are on
-        another OS or don't have this font, you need to adjust this path.
+    `language` : `str`
+        Language of input text, can be 'TH' or 'EN'
 
-    width : int (default=400)
+    `model` : `gensim.models.KeyedVectors` or `str` (default=None)
+        Word vector model. If None, the default model will be used,
+        which is 'glove-wiki-gigaword-50' for English and 'thai2fit-wv' for Thai.
+
+    `width` : `int` (default=400)
         Width of the canvas.
 
-    height : int (default=200)
+    `height` : `int` (default=200)
         Height of the canvas.
 
-    prefer_horizontal : float (default=0.9)
+    `margin` : `int` (default=2)
+        Margin of text boxes
+
+    `scale` : `float` (default=1)
+        Scaling between computation and drawing. For large word-cloud images,
+        using scale instead of larger canvas size is significantly faster, but
+        might lead to a coarser fit for the words.
+
+    `prefer_horizontal` : `float` (default=0.9)
         The ratio of times to try horizontal fitting as opposed to vertical.
         If prefer_horizontal < 1, the algorithm will try rotating the word
         if it doesn't fit. (There is currently no built-in way to get only
         vertical words.)
 
-    scale : float (default=1)
-        Scaling between computation and drawing. For large word-cloud images,
-        using scale instead of larger canvas size is significantly faster, but
-        might lead to a coarser fit for the words.
+    `color_func` : `Callable`, (default=None)
+        Callable with parameters word, font_size, position, orientation,
+        font_path, random_state that returns a PIL color for each word.
 
-    min_font_size : int (default=4)
-        Smallest font size to use. Will stop when there is no more room in this
-        size.
+        See swordcloud.color_func for available built-in color functions.
 
-    font_step : int (default=1)
-        Step size for the font. font_step > 1 might speed up computation but
-        give a worse fit.
-
-    max_words : number (default=200)
-        The maximum number of words.
-
-    stopwords : set of strings or None
-        The words that will be eliminated. If None, the build-in STOPWORDS
-        list will be used. Ignored if using generate_from_frequencies.
-
-    background_color : color value (default="black")
+    `background_color` : `Color` (default="white")
         Background color for the word cloud image.
 
-    max_font_size : int or None (default=None)
-        Maximum font size for the largest word. If None, height of the image is
-        used.
-
-    mode : string (default="RGB")
+    `mode` : `str` (default="RGB")
         Transparent background will be generated when mode is "RGBA" and
         background_color is None.
 
-    relative_scaling : float (default='auto')
-        Importance of relative word frequencies for font-size.  With
+    `min_word_length` : `int`, default=0
+        Minimum number of letters a word must have to be included.
+
+    `max_words` : `int` (default=200)
+        The maximum number of words.
+
+    `stopwords` : `set[str]` (default=None)
+        The words that will be eliminated. If None, the build-in STOPWORDS
+        list will be used. Only used when using `generate_from_text` method.
+
+    `font_path` : `str` (default=None)
+        Path to the font file that will be used (OTF or TTF).
+        If None, defaults to the FONT_PATH environment variable.
+        If FONT_PATH is not available, uses THSarabun,
+        which is bundled with swordcloud.
+
+    `min_font_size` : `int` (default=4)
+        Smallest font size to use. Will stop when there is no more room in this
+        size.
+
+    `max_font_size` : `int` (default=None)
+        Maximum font size for the largest word. If None, height of the image is
+        used.
+
+    `font_step` : `int` (default=1)
+        Step size for the font. font_step > 1 might speed up computation but
+        give a worse fit.
+
+    `relative_scaling` : `float` (default='auto')
+        Importance of relative word frequencies for font-size. With
         relative_scaling=0, only word-ranks are considered.  With
         relative_scaling=1, a word that is twice as frequent will have twice
         the size.  If you want to consider the word frequencies and not only
@@ -99,54 +121,31 @@ class SemanticWordCloud:
         If 'auto' it will be set to 0.5 unless repeat is true, in which
         case it will be set to 0.
 
-        .. versionchanged: 2.0
-            Default is now 'auto'.
+    `regexp` : `str` (default=None)
+        Regular expression to split the input text into tokens in process_text,
+        overriding the default tokenizer. Only used when using `generate_from_text` method.
 
-    color_func : callable, default=None
-        Callable with parameters word, font_size, position, orientation,
-        font_path, random_state that returns a PIL color for each word.
-        Overwrites "colormap".
-        See colormap for specifying a matplotlib colormap instead.
-        To create a word cloud with a single color, use
-        ``color_func=lambda *args, **kwargs: "white"``.
-        The single color can also be specified using RGB code. For example
-        ``color_func=lambda *args, **kwargs: (255,0,0)`` sets color to red.
-
-    regexp : string or None (optional)
-        Regular expression to split the input text into tokens in process_text.
-        If None is specified, ``r"\\w[\\w']+"`` is used. Ignored if using
-        generate_from_frequencies.
-
-    collocations : bool, default=False
-        Whether to include collocations (bigrams) of two words. Ignored if using
-        generate_from_frequencies.
-
-        .. versionadded: 2.0
-
-    colormap : string or matplotlib colormap, default="viridis"
-        Matplotlib colormap to randomly draw colors from for each word.
-        Ignored if "color_func" is specified.
-
-        .. versionadded: 2.0
-
-    normalize_plurals : bool, default=True
+    `normalize_plurals` : `bool`, (default=True)
+        For English only.
         Whether to remove trailing 's' from words. If True and a word
         appears with and without a trailing 's', the one with trailing 's'
         is removed and its counts are added to the version without
-        trailing 's' -- unless the word ends with 'ss'. Ignored if using
-        generate_from_frequencies.
+        trailing 's' -- unless the word ends with 'ss'.
+        Only used when using `generate_from_text` method.
 
-    repeat : bool, default=False
+    `repeat` : `bool`, (default=False)
         Whether to repeat words and phrases until max_words or min_font_size
         is reached.
 
-    include_numbers : bool, default=False
+    `include_numbers` : `bool`, (default=False)
         Whether to include numbers as phrases or not.
+        Only used when using `generate_from_text` method.
 
-    min_word_length : int, default=0
-        Minimum number of letters a word must have to be included.
+    `collocations` : `bool`, (default=False)
+        Whether to include collocations (bigrams) of two words.
+        Only used when using `generate_from_text` method.
 
-    collocation_threshold: int, default=30
+    `collocation_threshold`: `int`, (default=30)
         Bigrams must have a Dunning likelihood collocation score greater than this
         parameter to be counted as bigrams. Default of 30 is arbitrary.
 
@@ -154,15 +153,20 @@ class SemanticWordCloud:
         Statistical Natural Language Processing. MIT press, p. 162
         https://nlp.stanford.edu/fsnlp/promo/colloc.pdf#page=22
 
+    `random_state` : `random.Random` or `int` (default=None)
+        Random state to be used for random drawing.
+
     Attributes
     ----------
-    ``words_`` : dict of string to float
+    `sub_clouds` : `list[SemanticWordCloud]`
+        List of sub clouds generated by K-Means algorithm.
+        This attribute only exists after `generate_kmeans_cloud`
+        or `generate_from_text` with `kmeans` is called.
+
+    `words_` : `dict[str, float]`
         Word tokens with associated frequency.
 
-        .. versionchanged: 2.0
-            ``words_`` is now a dictionary
-
-    ``layout_`` : list of tuples ((string, float), int, (int, int), int, color))
+    `layout_`: `list[tuple[tuple[string, float], int, tuple[int, int], int, color)]]`
         Encodes the fitted word cloud. For each word, it encodes the string, 
         normalized frequency, font size, position, orientation, and color.
         The frequencies are normalized by the most commonly occurring word.
@@ -174,54 +178,52 @@ class SemanticWordCloud:
     large word cloud, try a lower canvas size, and set the scale parameter.
 
     The algorithm might give more weight to the ranking of the words
-    than their actual frequencies, depending on the ``max_font_size`` and the
+    than their actual frequencies, depending on the `max_font_size` and the
     scaling heuristic.
     """
     def __init__(
         self,
         language: Literal['TH', 'EN'],
-        font_path: Optional[str] = None,
+        model: Optional[Union[KeyedVectors, str]] = None,
         width: int = 400,
         height: int = 200,
         margin: int = 2,
-        prefer_horizontal: float = 0.9,
         scale: float = 1,
-        color_func: Optional[ColorFunc] = None,
-        max_words: int = 200,
-        min_font_size: int = 4,
-        stopwords: Optional[Set[str]] = None,
-        random_state: Optional[Union[Random, int]] = None,
+        prefer_horizontal: float = 0.9,
+        color_func: ColorFunc = RandomColorFunc,
         background_color: Color = 'white',
+        mode: str = "RGB",
+        min_word_length: int = 0,
+        max_words: int = 200,
+        stopwords: Optional[Set[str]] = None,
+        font_path: Optional[str] = None,
+        min_font_size: int = 4,
         max_font_size: Optional[int] = None,
         font_step: int = 1,
-        mode: str = "RGB",
         relative_scaling: Union[float, Literal['auto']] = 'auto',
         regexp: Optional[str] = None,
-        collocations: bool = False,
         normalize_plurals: Optional[bool] = None,
         repeat: bool = False,
         include_numbers: bool = False,
-        min_word_length: int = 0,
-        collocation_threshold: Optional[int] = None
+        collocations: bool = False,
+        collocation_threshold: Optional[int] = None,
+        random_state: Optional[Union[Random, int]] = None
     ):
         if language not in ('TH', 'EN'):
-            raise ValueError(f"language must be either 'TH' or 'EN', got {language}.")
+            raise ValueError(f"language must be either 'TH' or 'EN', got {repr(language)}.")
         self.language: Literal['TH', 'EN'] = language
 
-        if collocation_threshold is not None:
-            collocations = True
+        if isinstance(model, KeyedVectors):
+            self.model = model
+        elif isinstance(model, str):
+            if language == 'EN':
+                self.model = api.load(model)
+            else:
+                self.model = WordVector(model).get_model()
+        elif language == 'TH':
+            self.model = WordVector("thai2fit_wv").get_model()
         else:
-            collocation_threshold = 30
-        if collocations and language == 'EN':
-            self.collocations = False
-            self.collocation_threshold = 0
-            print(
-                "WARNING: collocations is not supported for English "
-                "since English word vector models do not contain bigrams."
-            )
-        else:
-            self.collocations = collocations
-            self.collocation_threshold = collocation_threshold
+            self.model = api.load("glove-wiki-gigaword-50")
 
         if normalize_plurals is None:
             self.normalize_plurals = language == 'EN'
@@ -241,21 +243,18 @@ class SemanticWordCloud:
         else:
             self.stopwords = DEFAULT_EN_STOPWORDS
 
-        if color_func is None:
-            version = matplotlib.__version__
-            if version[0] < "2" and version[2] < "5":
-                colormap = "hsv"
-            else:
-                colormap = "viridis"
-            self.color_func = ColorMapFunc(colormap)
+        if collocation_threshold is not None:
+            collocations = True
         else:
-            self.color_func = color_func
-
-        if random_state is None:
-            random_state = Random()
-        elif isinstance(random_state, int):
-            random_state = Random(random_state)
-        self.random_state = random_state
+            collocation_threshold = 30
+        if collocations and language == 'EN':
+            collocations = False
+            print(
+                "WARNING: collocations is not supported for English "
+                "since English word vector models do not contain bigrams."
+            )
+        self.collocations = collocations
+        self.collocation_threshold = collocation_threshold
 
         if relative_scaling == "auto":
             if repeat:
@@ -273,6 +272,10 @@ class SemanticWordCloud:
         else:
             self.regexp = None
 
+        if not isinstance(random_state, Random):
+            random_state = Random(random_state)
+        self.random_state = random_state
+
         self.font_path = font_path or DEFAULT_FONT_PATH
         self.width = width
         self.height = height
@@ -282,12 +285,36 @@ class SemanticWordCloud:
         self.max_words = max_words
         self.min_font_size = min_font_size
         self.font_step = font_step
+        self.color_func = color_func
         self.background_color = background_color
         self.max_font_size = max_font_size
         self.mode = mode
         self.repeat = repeat
         self.include_numbers = include_numbers
         self.min_word_length = min_word_length
+
+        self.sub_clouds: list[SemanticWordCloud] = []
+        self.layout_: list[tuple[tuple[str, float], int, tuple[int, int], Union[int, None], Color]] = []
+
+    def _embed_w2v(
+        self,
+        frequency_dict: Union[Dict[str, int], Dict[str, float]]
+    ) -> List[Tuple[str, NDArray[np.float32]]]:
+        """
+        Parameters
+        ----------
+        `frequency_dict` : `dict[str, int]` | `dict[str, float]`
+            contains words and associated frequency.
+
+        Returns
+        -------
+        List of tuples of word and its word vector: `list[tuple[str, NDArray[float32]]]`
+        """
+        return [
+            (word, self.model[word]) # type: ignore
+            for word in frequency_dict
+                if word in self.model
+        ]
 
     def generate_from_frequencies(
         self,
@@ -297,20 +324,26 @@ class SemanticWordCloud:
         plot_now: bool = True,
         random_state: Optional[Union[Random, int]] = None
     ):
-        """Create a word_cloud from words and frequencies.
+        """
+        Create a semantic word cloud from words and frequencies.
 
         Parameters
         ----------
-        frequency_dict : dict {string: int}
+        `frequency_dict` : `dict[str, int]`
             A contains words and associated frequency.
 
-        max_font_size : int
+        `max_font_size` : `int` (default=None)
             Use this font-size instead of self.max_font_size
 
-        Returns
-        -------
-        self
+        `tsne_plot` : `dict[str, tuple[float, float]]` (default=None)
+            A dictionary of word and its coordinates from TSNE plot.
+            If None, a TSNE plot will be generated.
 
+        `plot_now` : `bool` (default=True)
+            Whether to plot the word cloud immediately.
+
+        `random_state` : `random.Random` or `int` (default=None)
+            Random state to be used for random drawing.
         """
         if len(frequency_dict) <= 0:
             raise ValueError(
@@ -319,14 +352,14 @@ class SemanticWordCloud:
 
         if random_state is None:
             random_state = self.random_state
-        elif isinstance(random_state, int):
+        elif not isinstance(random_state, Random):
             random_state = Random(random_state)
 
         if tsne_plot is None:
             tsne_plot = plot_TSNE(
-                embed_w2v(frequency_dict, language=self.language),
-                language=self.language,
-                random_state=random_state
+                self._embed_w2v(frequency_dict),
+                language = self.language,
+                random_state = random_state
             )
         
         maxX = 0
@@ -465,7 +498,7 @@ class SemanticWordCloud:
             font_sizes.append(font_size)
             colors.append(
                 self.color_func(
-                    word,
+                    word = word,
                     font_size = font_size,
                     position = (x, y),
                     orientation = orientation,
@@ -481,38 +514,32 @@ class SemanticWordCloud:
             last_freq = freq
             last_font_size = font_size
 
-        self.layout_ = list(zip(
+        self.sub_clouds.clear()
+        self.layout_.clear()
+        self.layout_.extend(zip(
             [(w, f) for i, (w, f) in enumerate(frequencies) if i not in cant_draw],
             font_sizes,
             positions,
             orientations,
             colors
         ))
-        if plot_now:
-            dpi = plt.rcParams['figure.dpi']
-            plt.style.use('ggplot')
-            plt.figure(figsize=(self.width / dpi, self.height / dpi))
-            plt.imshow(self, interpolation="bilinear")
-            plt.axis('off')
-            plt.show()
 
-    def process_text(self, text: Union[str, List[str]]):
-        """Tokenization, a.k.a. splits a long text into words, eliminates the stopwords.
+        if plot_now:
+            self.show()
+
+    def _process_text(self, text: Union[str, List[str]]):
+        """
+        Tokenization, a.k.a. splits a long text into words, eliminates the stopwords.
 
         Parameters
         ----------
-        text : string
+        `text` : `str` | `list[str]`
             The text to be processed.
 
         Returns
         -------
-        words : dict (string, int)
+        `words` : `dict[str, int]`
             Word tokens with associated frequency.
-
-        Notes
-        -----
-        There are better ways to do word tokenization, but I don't want to
-        include all those things.
         """
         # EN is guaranteed to have regexp
         if self.regexp:
@@ -563,56 +590,91 @@ class SemanticWordCloud:
         text: Union[str, List[str]],
         tsne_plot: Optional[Dict[str, Tuple[float, float]]] = None,
         kmeans: Optional[int] = None,
-        plot_now: bool = True
+        plot_now: bool = True,
+        random_state: Optional[Union[Random, int]] = None
     ):
-        """Generate wordcloud from text.
+        """
+        Generate wordcloud from raw natural text.
+        This method calls `process_text` and then either
+        `generate_from_frequencies` or `generate_kmeans_cloud`.
+        If kmeans is not None, the generated sub clouds can be
+        accessed via `sub_clouds` attribute.
 
-        The input "text" is expected to be a natural text. If you pass a sorted
-        list of words, words will appear in your output twice.
+        Parameters
+        ----------
+        `text` : `str` | `list[str]`
+            The text to be processed.
 
-        Calls process_text and generate_from_frequencies.
+        `tsne_plot` : `dict[str, tuple[float, float]]` (default=None)
+            A dictionary of word and its coordinates from TSNE plot.
+            If None, a TSNE plot will be generated.
+            Mutually exclusive with `kmeans`.
 
-        Returns
-        -------
-        self
+        `kmeans` : `int` (default=None)
+            Number of clusters for K-Means algorithm.
+            Mutually exclusive with `tsne_plot`.
+
+        `plot_now` : `bool` (default=True)
+            Whether to plot the word cloud immediately.
+
+        `random_state` : `random.Random` or `int` (default=None)
+            Random state to be used for random drawing.
         """
         if tsne_plot is not None and kmeans is not None:
             raise ValueError("Cannot use both tsne_plot and kmeans at the same time.")
-        words = self.process_text(text)
-        if kmeans:
+
+        words = self._process_text(text)
+        if kmeans is not None:
             if kmeans <= 1:
                 raise ValueError(f'kmeans must be greater than 1, got {kmeans}.')
-            return self.generate_kmeans_cloud(words, n_clusters=kmeans, plot_now=plot_now)
+            self.generate_kmeans_cloud(
+                frequency_dict = words,
+                n_clusters = kmeans,
+                plot_now = plot_now,
+                random_state = random_state
+            )
         else:
-            self.generate_from_frequencies(words, tsne_plot=tsne_plot, plot_now=plot_now)
+            self.generate_from_frequencies(
+                frequency_dict = words,
+                tsne_plot = tsne_plot,
+                plot_now = plot_now,
+                random_state = random_state
+            )
 
-    def gen_kmeans_frequencies(
+    def _gen_kmeans_frequencies(
         self,
         model: List[Tuple[str, NDArray[np.float32]]],
-        word_count: Union[Dict[str, int], Dict[str, float]],
+        frequency_dict: Union[Dict[str, int], Dict[str, float]],
         n_clusters: int,
         random_state: Optional[Union[Random, int]] = None
     ):
         """
         Parameters
         ----------
-        model : gensim.models.KeyedVector or list of tuple of (str, list[str])
-            word vector model (must come with 'labels') or list of tuple of word and word vectors (no 'labels' needed)
+        `model` : list[tuple[str, NDArray[float32]]]
+            List of tuple of word and its word vectors
 
-        label : list of str (optional)
-            words that we focused on; only in case of the 'model' is a whole word vector model.
-        
+        `frequency_dict` : `dict[str, int]` | `dict[str, float]`
+            Words and their associated frequency.
+
+        `n_clusters` : `int`
+            Number of clusters for K-Means algorithm.
+
+        `random_state` : `random.Random` or `int` (default=None)
+            Random state to be used for K-Means algorithm.
+
         Returns
         -------
-        List from str to tuple of floats, contains coordinates of words.
+        `list[tuple[int, list[tuple[str, float]]]]`
+            List of tuple of cluster number and list of tuple of word and its frequency
         """
         if random_state is None:
             random_state = self.random_state
-        elif isinstance(random_state, int):
+        elif not isinstance(random_state, Random):
             random_state = Random(random_state)
 
         label = list(map(lambda x: x[0], model))
-        df = pd.DataFrame(data={
+        df = DataFrame(data={
             'word': label,
             'cluster': kmeans_cluster(
                 model = model,
@@ -620,7 +682,7 @@ class SemanticWordCloud:
                 random_state = random_state
             )
         })
-        df['word_count'] = df['word'].map(word_count)
+        df['word_count'] = df['word'].map(frequency_dict)
 
         k_means_freq: List[Tuple[int, List[Tuple[str, float]]]] = []        
         for i in range(n_clusters):
@@ -641,57 +703,88 @@ class SemanticWordCloud:
 
     def generate_kmeans_cloud(
         self,
-        freq: Union[Dict[str, int], Dict[str, float]],
+        frequency_dict: Union[Dict[str, int], Dict[str, float]],
         n_clusters: int,
         plot_now: bool = True,
         random_state: Optional[Union[Random, int]] = None
     ):
+        """
+        Generate semantic word cloud using K-Means algorithm.
+        The generated sub clouds can be accessed via `sub_clouds` attribute.
+
+        Parameters
+        ----------
+        `frequency_dict` : `dict[str, int]` | `dict[str, float]`
+            Words and their associated frequency.
+
+        `n_clusters` : `int`
+            Number of clusters for K-Means algorithm.
+
+        `plot_now` : `bool` (default=True)
+            Whether to plot the word cloud immediately.
+
+        `random_state` : `random.Random` or `int` (default=None)
+            Random state to be used for K-Means algorithm.
+        """
         if random_state is None:
             random_state = self.random_state
-        elif isinstance(random_state, int):
+        elif not isinstance(random_state, Random):
             random_state = Random(random_state)
 
-        model = embed_w2v(freq, language=self.language)
-        kmeans_freq = self.gen_kmeans_frequencies(model, freq, n_clusters=n_clusters)
+        model = self._embed_w2v(frequency_dict)
+        kmeans_freq = self._gen_kmeans_frequencies(model, frequency_dict, n_clusters=n_clusters)
 
         n_vertical = n_horizontal = ceil(sqrt(n_clusters))
         if (n_vertical - 1) * n_horizontal >= n_clusters:
             n_vertical -= 1
 
-        clouds = [
+        self.sub_clouds.clear()
+        self.layout_.clear()
+        self.sub_clouds.extend(
             SemanticWordCloud(
                 language = self.language,
-                font_path = self.font_path,
+                model = self.model,
                 width = self.width // n_horizontal,
                 height = self.height // n_vertical,
                 margin = self.margin,
-                prefer_horizontal = self.prefer_horizontal,
                 scale = self.scale,
+                prefer_horizontal = self.prefer_horizontal,
                 color_func = self.color_func,
-                max_words = self.max_words,
-                min_font_size = self.min_font_size,
-                stopwords = self.stopwords,
-                random_state = random_state,
                 background_color = self.background_color,
+                mode = self.mode,
+                min_word_length = self.min_word_length,
+                max_words = self.max_words,
+                stopwords = self.stopwords,
+                font_path = self.font_path,
+                min_font_size = self.min_font_size,
                 max_font_size = self.max_font_size,
                 font_step = self.font_step,
-                mode = self.mode,
                 relative_scaling = self.relative_scaling,
                 regexp = self.regexp.pattern if self.regexp else None,
-                collocations = self.collocations,
                 normalize_plurals = self.normalize_plurals,
                 repeat = self.repeat,
                 include_numbers = self.include_numbers,
-                min_word_length = self.min_word_length,
-                collocation_threshold = self.collocation_threshold
+                collocations = self.collocations,
+                collocation_threshold = self.collocation_threshold,
+                random_state = random_state,
             ) for _ in range(n_clusters)
-        ]
+        )
 
-        for i, cloud in enumerate(clouds):
+        for i, cloud in enumerate(self.sub_clouds):
             topic_words = dict(kmeans_freq[i][1]) # list of (words, freq)
             cloud.generate_from_frequencies(topic_words, plot_now=False) # set topic
 
         if plot_now:
+            self.show()
+
+    def show(self):
+        self._check_generated()
+        if self.sub_clouds:
+            n_clusters = len(self.sub_clouds)
+            n_vertical = n_horizontal = ceil(sqrt(n_clusters))
+            if (n_vertical - 1) * n_horizontal >= n_clusters:
+                n_vertical -= 1
+
             dpi = plt.rcParams['figure.dpi']
             fig, axes = plt.subplots(
                 n_vertical,
@@ -700,7 +793,7 @@ class SemanticWordCloud:
                 sharex=True,
                 sharey=True
             )
-            for cloud, ax in zip_longest(clouds, axes.flatten()):
+            for cloud, ax in zip_longest(self.sub_clouds, axes.flatten()):
                 ax.axhline(y=0, color='black', linewidth=1)
                 ax.axvline(x=0, color='black', linewidth=1)
                 fig.add_subplot(ax)
@@ -710,16 +803,28 @@ class SemanticWordCloud:
                 plt.gca().axis('off')
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.show()
-
-        return clouds
+        else:
+            dpi = plt.rcParams['figure.dpi']
+            plt.style.use('ggplot')
+            plt.figure(figsize=(self.width / dpi, self.height / dpi))
+            plt.imshow(self, interpolation="bilinear")
+            plt.axis('off')
+            plt.show()
 
     def _check_generated(self):
-        """Check if ``layout_`` was computed, otherwise raise error."""
-        if not hasattr(self, "layout_"):
+        """Check if `layout_` or `sub_clouds` was computed, otherwise raise error."""
+        if not (self.layout_ or self.sub_clouds):
             raise ValueError("SemanticWordCloud has not been calculated, call generate first.")
 
     def to_image(self):
+        """Convert to `pillow`'s image."""
         self._check_generated()
+        if self.sub_clouds:
+            raise ValueError(
+                "Cannot directly convert a SemanticWordCloud with sub clouds to image. "
+                "Call `to_image` individually from a sub cloud instead."
+            )
+
         height, width = self.height, self.width
 
         img = Image.new(
@@ -738,90 +843,98 @@ class SemanticWordCloud:
 
     def recolor(
         self,
-        new_color_func: ColorFunc,
+        color_func: Optional[ColorFunc] = None,
+        plot_now: bool = True,
         random_state: Optional[Union[Random, int]] = None
     ):
-        """Recolor existing layout.
+        """
+        Recolor existing layout.
 
         Applying a new coloring is much faster than generating the whole
         wordcloud.
 
         Parameters
         ----------
-        random_state : RandomState, int, or None, default=None
+        `color_func` : `Callable`
+            Function to generate new colors. If None, self.color_func is used again.
+
+        plot_now : `bool` (default=True)
+            Whether to plot the recolored word cloud immediately.
+    
+        `random_state` : `random.Random` or `int` (default=None)
+            If None, use self.random_state.
             If not None, a fixed random state is used. If an int is given, this
             is used as seed for a random.Random state.
-
-        color_func : function or None, default=None
-            Function to generate new color from word count, font size, position
-            and orientation.  If None, self.color_func is used.
-
-        colormap : string or matplotlib colormap, default=None
-            Use this colormap to generate new colors. Ignored if color_func
-            is specified. If None, self.color_func (or self.color_map) is used.
-
-        Returns
-        -------
-        self
         """
         if random_state is None:
             random_state = self.random_state
-        elif isinstance(random_state, int):
+        elif not isinstance(random_state, Random):
             random_state = Random(random_state)
 
-        self.color_func = new_color_func
+        if color_func is None:
+            color_func = self.color_func
 
         self._check_generated()
-        self.layout_ = [
-            (
-                word_freq,
-                font_size,
-                position,
-                orientation,
-                self.color_func(
-                    word = word_freq[0],
-                    font_size = font_size,
-                    position = position,
-                    orientation = orientation,
-                    random_state = random_state,
-                    font_path = self.font_path
+        if self.sub_clouds:
+            for cloud in self.sub_clouds:
+                cloud.recolor(color_func, plot_now=False, random_state=random_state)
+        else:
+            self.layout_ = [
+                (
+                    word_freq,
+                    font_size,
+                    position,
+                    orientation,
+                    color_func(
+                        word = word_freq[0],
+                        font_size = font_size,
+                        position = position,
+                        orientation = orientation,
+                        random_state = random_state,
+                        font_path = self.font_path
+                    )
                 )
-            )
-            for word_freq, font_size, position, orientation, _ in self.layout_
-        ]
+                for word_freq, font_size, position, orientation, _ in self.layout_
+            ]
+
+        if plot_now:
+            self.show()
 
     def to_file(self, filename: str):
-        """Export to image file.
+        """
+        Export to image file.
 
         Parameters
         ----------
-        filename : string
+        `filename` : `str`
             Location to write to.
-
-        Returns
-        -------
-        self
         """
-
-        img = self.to_image()
-        img.save(filename, optimize=True)
+        if self.sub_clouds:
+            filename, extension = path.splitext(filename)
+            for i, cloud in enumerate(self.sub_clouds, start=1):
+                cloud.to_file(filename + '_' + str(i) + extension)
+        else:
+            img = self.to_image()
+            img.save(filename, optimize=True)
 
     def to_array(self):
-        """Convert to numpy array.
+        """
+        Convert to numpy array.
 
         Returns
         -------
-        image : nd-array size (width, height, 3)
+        `image` : `NDArray` size (width, height, 3)
             Word cloud image as numpy matrix.
         """
         return np.array(self.to_image())
 
     def __array__(self):
-        """Convert to numpy array.
+        """
+        Convert to numpy array.
 
         Returns
         -------
-        image : nd-array size (width, height, 3)
+        `image` : `NDArray` size (width, height, 3)
             Word cloud image as numpy matrix.
         """
         return self.to_array()
@@ -832,15 +945,16 @@ class SemanticWordCloud:
         optimize_embedded_font: bool = True,
         embed_image: bool = False
     ):
-        """Export to SVG.
+        """
+        Export to SVG.
 
         Font is assumed to be available to the SVG reader. Otherwise, text
         coordinates may produce artifacts when rendered with replacement font.
         It is also possible to include a subset of the original font in WOFF
-        format using ``embed_font`` (requires `fontTools`).
+        format using `embed_font` (requires `fontTools`).
 
         Note that some renderers do not handle glyphs the same way, and may
-        differ from ``to_image`` result. In particular, Complex Text Layout may
+        differ from `to_image` result. In particular, Complex Text Layout may
         not be supported. In this typesetting, the shape or positioning of a
         grapheme depends on its relation to other graphemes.
 
@@ -856,21 +970,21 @@ class SemanticWordCloud:
 
         Parameters
         ----------
-        embed_font : bool, default=False
+        `embed_font` : `bool`, (default=False)
             Whether to include font inside resulting SVG file.
 
-        optimize_embedded_font : bool, default=True
+        `optimize_embedded_font` : `bool`, (default=True)
             Whether to be aggressive when embedding a font, to reduce size. In
             particular, hinting tables are dropped, which may introduce slight
             changes to character shapes (w.r.t. `to_image` baseline).
 
-        embed_image : bool, default=False
+        `embed_image` : `bool`, (default=False)
             Whether to include rasterized image inside resulting SVG file.
             Useful for debugging.
 
         Returns
         -------
-        content : string
+        `content` : `str`
             Word cloud image as SVG string
         """
 
@@ -878,6 +992,11 @@ class SemanticWordCloud:
 
         # Make sure layout is generated
         self._check_generated()
+        if self.sub_clouds:
+            raise ValueError(
+                "Cannot directly convert a SemanticWordCloud with sub clouds to SVG. "
+                "Call `to_svg` from a sub cloud individually instead."
+            )
 
         # Get output size, in pixels
         height, width = self.height, self.width
@@ -941,16 +1060,16 @@ class SemanticWordCloud:
 
             # Export as WOFF
             # TODO is there a better method, i.e. directly export to WOFF?
-            buffer = io.BytesIO()
+            buffer = BytesIO()
             ttf.saveXML(buffer)
             buffer.seek(0)
             woff = TTFont(flavor='woff')
             woff.importXML(buffer)
 
             # Create stylesheet with embedded font face
-            buffer = io.BytesIO()
+            buffer = BytesIO()
             woff.save(buffer)
-            data = base64.b64encode(buffer.getbuffer()).decode('ascii')
+            data = b64encode(buffer.getbuffer()).decode('ascii')
             url = 'data:application/font-woff;charset=utf-8;base64,' + data
             result.append(
                 f'<style>@font-face{{font-family:{font_family};font-weight:{font_weight};font-style:{font_style};src:url("{url}")format("woff");}}</style>'
@@ -970,9 +1089,9 @@ class SemanticWordCloud:
         # Embed image, useful for debug purpose
         if embed_image:
             image = self.to_image()
-            data = io.BytesIO()
+            data = BytesIO()
             image.save(data, format='JPEG')
-            data = base64.b64encode(data.getbuffer()).decode('ascii')
+            data = b64encode(data.getbuffer()).decode('ascii')
             result.append(
                 f'<image width="100%" height="100%" href="data:image/jpg;base64,{data}"/>'
             )

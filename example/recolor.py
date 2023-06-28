@@ -1,5 +1,5 @@
 from swordcloud import SemanticWordCloud
-from swordcloud.color_func import SingleColorFunc
+from swordcloud.color_func import SingleColorFunc, RandomColorFunc
 
 wordcloud = SemanticWordCloud(
     language = 'TH',
@@ -15,4 +15,6 @@ with open('raw_text.txt', encoding='utf-8') as file:
 
 wordcloud.generate_from_text(raw_text, random_state=42)
 
-wordcloud.to_file('generate_from_raw_text.png')
+wordcloud.recolor(RandomColorFunc)
+
+wordcloud.to_file('recolor.png')

@@ -1,1 +1,1 @@
-from .wordcloud import SemanticWordCloud, DEFAULT_FONT_PATH, DEFAULT_EN_STOPWORDS, DEFAULT_TH_STOPWORDS
+from .wordcloud import SemanticWordCloud
