@@ -86,10 +86,15 @@ wordcloud.generate_from_text(raw_text, kmeans=6)
 # Or directly from `generate_kmeans_cloud` if you already have word frequencies
 wordcloud.generate_kmeans_cloud(freq, n_clusters=6)
 
-# Each sub cloud can be individually interacted with by accessing individual cloud in `sub_clouds` attribute
+# Each sub cloud can then be individually interacted with
+# by accessing individual cloud in `sub_clouds` attribute
 for cloud in wordcloud.sub_clouds:
     ...
 ```
+||||
+-|-|-
+![Word cloud 1 generated from k-means clustering](example/generate_kmeans_cloud_1.png)|![Word cloud 2 generated from k-means clustering](example/generate_kmeans_cloud_2.png)|![Word cloud 3 generated from k-means clustering](example/generate_kmeans_cloud_3.png)
+![Word cloud 4 generated from k-means clustering](example/generate_kmeans_cloud_4.png)|![Word cloud 5 generated from k-means clustering](example/generate_kmeans_cloud_5.png)|![Word cloud 6 generated from k-means clustering](example/generate_kmeans_cloud_6.png)
 ### **Recolor Words**
 ```python
 # If the generated colors are not to your liking
@@ -97,6 +102,7 @@ for cloud in wordcloud.sub_clouds:
 from swordcloud.color_func import RandomColorFunc
 wordcloud.recolor(RandomColorFunc)
 ```
+![Recolored word cloud](example/recolor.png)
 ### **Export Word Clouds**
 - As `pillow`'s `Image`
 ```python
