@@ -15,6 +15,6 @@ with open('raw_text.txt', encoding='utf-8') as file:
 
 wordcloud.generate_from_text(raw_text, random_state=42)
 
-wordcloud.recolor(RandomColorFunc)
+wordcloud.recolor(RandomColorFunc, random_state=42)
 
 wordcloud.to_file('recolor.png')
