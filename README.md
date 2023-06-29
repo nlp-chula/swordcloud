@@ -34,7 +34,7 @@ As of **version 0.0.9**, the exact list of dependencies is as follow:
 - (optional) `fonttools`
 
 ## **Usage**
-All code below can also be found in [the example folder](example).
+All code below can also be found in [the example folder](https://github.com/nlp-chula/swordcloud/tree/main/example).
 ### **Initialize `SemanticWordCloud` instance**
 For most use cases, the `SemanticWordCloud` class is the main API the users will be interacting with.
 ```python
@@ -51,7 +51,7 @@ wordcloud = SemanticWordCloud(
     color_func = SingleColorFunc('black')
 )
 ```
-Please refer to the documentation in [src/swordcloud/wordcloud.py](src/swordcloud/wordcloud.py) or in your IDE for more detail about various options available for customizing the word cloud.
+Please refer to the documentation in [src/swordcloud/wordcloud.py](https://github.com/nlp-chula/swordcloud/blob/main/src/swordcloud/wordcloud.py) or in your IDE for more detail about various options available for customizing the word cloud.
 ### **Generate from Raw Text**
 ```python
 # Can also be one large string instead of a list of strings
@@ -59,7 +59,7 @@ raw_text = list(map(str.strip, open('raw_text.txt', encoding='utf-8')))
 
 wordcloud.generate_from_text(raw_txt, random_state=42)
 ```
-![Word cloud generated from raw text](example/generate_from_raw_text.png)
+![Word cloud generated from raw text](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_from_raw_text.png)
 ### **Generate from Word Frequencies**
 ```python
 freq = {}
@@ -69,7 +69,7 @@ for line in open("word_frequencies.tsv", encoding="utf-8"):
 
 wordcloud.generate_from_frequencies(freq, random_state=42)
 ```
-![Word cloud generated from word frequencies](example/generate_from_frequencies.png)
+![Word cloud generated from word frequencies](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_from_frequencies.png)
 ### **Generate k-means Cluster Clouds**
 ```python
 wordcloud = SemanticWordCloud(
@@ -93,8 +93,8 @@ for cloud in wordcloud.sub_clouds:
 ```
 ||||
 -|-|-
-![Word cloud 1 generated from k-means clustering](example/generate_kmeans_cloud_1.png)|![Word cloud 2 generated from k-means clustering](example/generate_kmeans_cloud_2.png)|![Word cloud 3 generated from k-means clustering](example/generate_kmeans_cloud_3.png)
-![Word cloud 4 generated from k-means clustering](example/generate_kmeans_cloud_4.png)|![Word cloud 5 generated from k-means clustering](example/generate_kmeans_cloud_5.png)|![Word cloud 6 generated from k-means clustering](example/generate_kmeans_cloud_6.png)
+![Word cloud 1 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_1.png)|![Word cloud 2 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_2.png)|![Word cloud 3 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_3.png)
+![Word cloud 4 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_4.png)|![Word cloud 5 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_5.png)|![Word cloud 6 generated from k-means clustering](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_kmeans_cloud_6.png)
 ### **Recolor Words**
 ```python
 # If the generated colors are not to your liking
@@ -102,7 +102,7 @@ for cloud in wordcloud.sub_clouds:
 from swordcloud.color_func import RandomColorFunc
 wordcloud.recolor(RandomColorFunc)
 ```
-![Recolored word cloud](example/recolor.png)
+![Recolored word cloud](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/recolor.png)
 ### **Export Word Clouds**
 - As `pillow`'s `Image`
 ```python
