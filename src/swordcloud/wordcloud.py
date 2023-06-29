@@ -647,7 +647,7 @@ class SemanticWordCloud:
         model: List[Tuple[str, NDArray[np.float32]]],
         frequency_dict: Union[Dict[str, int], Dict[str, float]],
         n_clusters: int,
-        random_state: Optional[Union[Random, int]] = None
+        random_state: Random
     ):
         """
         Parameters
@@ -669,11 +669,6 @@ class SemanticWordCloud:
         `list[tuple[int, list[tuple[str, float]]]]`
             List of tuple of cluster number and list of tuple of word and its frequency
         """
-        if random_state is None:
-            random_state = self.random_state
-        elif not isinstance(random_state, Random):
-            random_state = Random(random_state)
-
         label = list(map(lambda x: x[0], model))
         df = DataFrame(data={
             'word': label,
@@ -733,7 +728,12 @@ class SemanticWordCloud:
             random_state = Random(random_state)
 
         model = self._embed_w2v(frequency_dict)
-        kmeans_freq = self._gen_kmeans_frequencies(model, frequency_dict, n_clusters=n_clusters)
+        kmeans_freq = self._gen_kmeans_frequencies(
+            model,
+            frequency_dict,
+            n_clusters = n_clusters,
+            random_state = random_state
+        )
 
         n_vertical = n_horizontal = ceil(sqrt(n_clusters))
         if (n_vertical - 1) * n_horizontal >= n_clusters:
