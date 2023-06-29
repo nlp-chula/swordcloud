@@ -82,9 +82,9 @@ wordcloud = SemanticWordCloud(
     color_func = SingleColorFunc('black')
 )
 
-wordcloud.generate_from_text(raw_text, kmeans=6)
+wordcloud.generate_from_text(raw_text, kmeans=6, random_state=42)
 # Or directly from `generate_kmeans_cloud` if you already have word frequencies
-wordcloud.generate_kmeans_cloud(freq, n_clusters=6)
+wordcloud.generate_kmeans_cloud(freq, n_clusters=6, random_state=42)
 
 # Each sub cloud can then be individually interacted with
 # by accessing individual cloud in `sub_clouds` attribute
@@ -100,7 +100,7 @@ for cloud in wordcloud.sub_clouds:
 # If the generated colors are not to your liking
 # We can recolor them instead of re-generating the whole cloud
 from swordcloud.color_func import RandomColorFunc
-wordcloud.recolor(RandomColorFunc)
+wordcloud.recolor(RandomColorFunc, random_state=42)
 ```
 ![Recolored word cloud](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/recolor.png)
 ### **Export Word Clouds**
