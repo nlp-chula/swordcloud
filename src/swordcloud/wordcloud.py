@@ -293,8 +293,8 @@ class SemanticWordCloud:
         self.include_numbers = include_numbers
         self.min_word_length = min_word_length
 
-        self.sub_clouds: list[SemanticWordCloud] = []
-        self.layout_: list[tuple[tuple[str, float], int, tuple[int, int], Union[int, None], Color]] = []
+        self.sub_clouds: List[SemanticWordCloud] = []
+        self.layout_: List[Tuple[Tuple[str, float], int, Tuple[int, int], Optional[int], Color]] = []
 
     def _embed_w2v(
         self,
@@ -312,9 +312,9 @@ class SemanticWordCloud:
         """
         return [
             (word, self.model[word]) # type: ignore
-            for word in frequency_dict
+            for word in sorted(frequency_dict, key=lambda k: frequency_dict[k], reverse=True)
                 if word in self.model
-        ]
+        ][:self.max_words]
 
     def generate_from_frequencies(
         self,
@@ -361,7 +361,7 @@ class SemanticWordCloud:
                 language = self.language,
                 random_state = random_state
             )
-        
+
         maxX = 0
         maxY = 0
         for ind in tsne_plot.values():
@@ -371,9 +371,11 @@ class SemanticWordCloud:
                 maxY = ind[1]
         
         # make sure frequencies are sorted and normalized
-        frequency_dict = {k: v for k, v in frequency_dict.items() if k in tsne_plot}
-        frequencies = sorted(frequency_dict.items(), key=itemgetter(1), reverse=True)
-        frequencies = frequencies[:self.max_words]
+        frequencies = sorted(
+            ((k, v) for k, v in frequency_dict.items() if k in tsne_plot),
+            key=itemgetter(1),
+            reverse=True
+        )
         # largest entry will be 1
         max_frequency = float(frequencies[0][1])
         frequencies = [(word, freq / max_frequency) for word, freq in frequencies]
@@ -515,8 +517,7 @@ class SemanticWordCloud:
             last_font_size = font_size
 
         self.sub_clouds.clear()
-        self.layout_.clear()
-        self.layout_.extend(zip(
+        self.layout_ = list(zip(
             [(w, f) for i, (w, f) in enumerate(frequencies) if i not in cant_draw],
             font_sizes,
             positions,
@@ -538,7 +539,7 @@ class SemanticWordCloud:
 
         Returns
         -------
-        `words` : `dict[str, int]`
+        `words` : `Counter[str]`
             Word tokens with associated frequency.
         """
         # EN is guaranteed to have regexp
@@ -583,7 +584,7 @@ class SemanticWordCloud:
             else:
                 word_counts = Counter(words)
 
-        return dict(word_counts.most_common(self.max_words))
+        return word_counts
 
     def generate_from_text(
         self,
@@ -738,9 +739,8 @@ class SemanticWordCloud:
         if (n_vertical - 1) * n_horizontal >= n_clusters:
             n_vertical -= 1
 
-        self.sub_clouds.clear()
         self.layout_.clear()
-        self.sub_clouds.extend(
+        self.sub_clouds = [
             SemanticWordCloud(
                 language = self.language,
                 model = self.model,
@@ -768,7 +768,7 @@ class SemanticWordCloud:
                 collocation_threshold = self.collocation_threshold,
                 random_state = random_state,
             ) for _ in range(n_clusters)
-        )
+        ]
 
         for i, cloud in enumerate(self.sub_clouds):
             topic_words = dict(kmeans_freq[i][1]) # list of (words, freq)

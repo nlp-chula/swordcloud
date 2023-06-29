@@ -29,7 +29,7 @@ As of **version 0.0.9**, the exact list of dependencies is as follow:
 - `gensim >= 4.0.0`
 - `pandas`
 - `pythainlp >= 3.1.0`
-- `k_means_constrained`
+- `k-means-constrained`
 - `scikit-learn`
 - (optional) `fonttools`
 
