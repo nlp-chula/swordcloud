@@ -408,7 +408,8 @@ class SemanticWordCloud:
                     dict(frequencies[:2]),
                     max_font_size = self.height,
                     plot_now = False,
-                    tsne_plot = tsne_plot
+                    tsne_plot = tsne_plot,
+                    random_state = random_state
                 )
                 # find font sizes
                 sizes = [x[1] for x in self.layout_]
