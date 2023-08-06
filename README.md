@@ -57,7 +57,7 @@ Please refer to the documentation in [src/swordcloud/wordcloud.py](https://githu
 # Can also be one large string instead of a list of strings
 raw_text = list(map(str.strip, open('raw_text.txt', encoding='utf-8')))
 
-wordcloud.generate_from_text(raw_txt, random_state=42)
+wordcloud.generate_from_text(raw_text, random_state=42)
 ```
 ![Word cloud generated from raw text](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_from_raw_text.png)
 ### **Generate from Word Frequencies**
