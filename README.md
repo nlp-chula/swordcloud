@@ -21,7 +21,7 @@ Optionally, if you want to be able to embed fonts directly into [the generated S
 ```
 pip install swordcloud[embedfont]
 ```
-As of **version 0.0.9**, the exact list of dependencies is as follow:
+As of **version 0.0.10**, the exact list of dependencies is as follow:
 - `python >= 3.8`
 - `numpy >= 1.21.0`
 - `pillow`
@@ -72,24 +72,27 @@ wordcloud.generate_from_frequencies(freq, random_state=42)
 ![Word cloud generated from word frequencies](https://raw.githubusercontent.com/nlp-chula/swordcloud/main/example/generate_from_frequencies.png)
 ### **Generate k-means Cluster Clouds**
 ```python
+from swordcloud.color_func import FrequencyColorFunc
+
 wordcloud = SemanticWordCloud(
     language = 'TH',
     # make sure the canvas is appropriately large for the number of clusters
     width = 2400,
     height = 1200,
     max_font_size = 150,
-    prefer_horizontal = 1,
-    color_func = SingleColorFunc('black')
+    prefer_horizontal = 1
 )
 
-wordcloud.generate_from_text(raw_text, kmeans=6, random_state=42)
+wordcloud.generate_from_text(raw_text, kmeans=6, random_state=42, plot_now=False)
 # Or directly from `generate_kmeans_cloud` if you already have word frequencies
-wordcloud.generate_kmeans_cloud(freq, n_clusters=6, random_state=42)
+wordcloud.generate_kmeans_cloud(freq, n_clusters=6, random_state=42, plot_now=False)
 
 # Each sub cloud can then be individually interacted with
 # by accessing individual cloud in `sub_clouds` attribute
-for cloud in wordcloud.sub_clouds:
-    ...
+for cloud, color in zip(wordcloud.sub_clouds, ["red", "blue", "brown", "green", "black", "orange"]):
+    cloud.recolor(FrequencyColorFunc(color), plot_now=False)
+
+cloud.show()
 ```
 ||||
 -|-|-
@@ -143,6 +146,8 @@ The list of available functions is as follow:
     Always return the user-specified color every single time, resulting in every word having the same color.
 - `ExactColorFunc`\
     Use a user-provided color dictionary to determine exactly which word should have which color.
+- `FrequencyColorFunc`\
+    Assign colors based on word frequencies, with less frequent words having lighter colors. The base color is specified by the user.
 
 All the above functions, **except** `RandomColorFunc` which cannot be customized further, must be initialized before passing them to the `SemanticWordCloud` class. For example:
 ```python
@@ -159,11 +164,13 @@ Users can also implement their own color functions, provided that they are calla
 **Input**:
 - `word: str`\
     The word we are coloring
+- `frequency: float`\
+    Frequency of the word in a scale from 0 to 1
 - `font_size: int`\
     Font size of the word
 - `position: tuple[int, int]`\
     Coordinate of the top-left point  of the word's bounding box on the canvas
-- `orientation: int`\
+- `orientation: PIL.Image.Transpose | None`\
     [`pillow`'s orientation](https://pillow.readthedocs.io/en/stable/reference/Image.html#transpose-methods).
 - `font_path: str`\
     Path to the font file (OTF or TFF)

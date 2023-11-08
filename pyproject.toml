@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swordcloud"
-version = "0.0.9"
+version = "0.0.10"
 description = "Semantic word cloud package for Thai and English"
 authors = [
     {name = "Attapol Thamrongrattanarit", email = "profte@gmail.com"}

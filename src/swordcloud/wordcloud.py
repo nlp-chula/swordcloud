@@ -294,7 +294,7 @@ class SemanticWordCloud:
         self.min_word_length = min_word_length
 
         self.sub_clouds: List[SemanticWordCloud] = []
-        self.layout_: List[Tuple[Tuple[str, float], int, Tuple[int, int], Optional[int], Color]] = []
+        self.layout_: List[Tuple[Tuple[str, float], int, Tuple[int, int], Optional[Image.Transpose], Color, float]] = []
 
     def _embed_w2v(
         self,
@@ -390,7 +390,7 @@ class SemanticWordCloud:
 
         font_sizes: List[int] = []
         positions: List[Tuple[int, int]] = []
-        orientations: List[Optional[int]] = []
+        orientations: List[Optional[Image.Transpose]] = []
         colors: List[Color] = []
 
         if max_font_size is None:
@@ -456,7 +456,7 @@ class SemanticWordCloud:
             if random_state.random() < self.prefer_horizontal:
                 orientation = None
             else:
-                orientation = Image.ROTATE_90
+                orientation = Image.Transpose.ROTATE_90
             tried_other_orientation = False
             while True:
                 # try to find a position
@@ -464,7 +464,7 @@ class SemanticWordCloud:
                 # transpose font optionally
                 transposed_font = ImageFont.TransposedFont(font, orientation=orientation)
                 # get size of resulting text
-                box_size = draw.textsize(word, font=transposed_font)
+                _, _, *box_size = draw.textbbox((0, 0), word, font=transposed_font)
 
                 # find possible places using integral image:
                 resu = tsne_plot[word]
@@ -481,7 +481,7 @@ class SemanticWordCloud:
                 # if we didn't find a place, make font smaller
                 # but first try to rotate!
                 if not tried_other_orientation and self.prefer_horizontal < 1:
-                    orientation = Image.ROTATE_90
+                    orientation = Image.Transpose.ROTATE_90
                     tried_other_orientation = True
                 else:
                     font_size -= self.font_step
@@ -502,6 +502,7 @@ class SemanticWordCloud:
             colors.append(
                 self.color_func(
                     word = word,
+                    frequency = self.words_[word],
                     font_size = font_size,
                     position = (x, y),
                     orientation = orientation,
@@ -519,12 +520,13 @@ class SemanticWordCloud:
 
         self.sub_clouds.clear()
         self.layout_ = list(zip(
-            [(w, f) for i, (w, f) in enumerate(frequencies) if i not in cant_draw],
+            ((w, f) for i, (w, f) in enumerate(frequencies) if i not in cant_draw),
             font_sizes,
             positions,
             orientations,
-            colors
-        ))
+            colors,
+            (self.words_[w] for i, (w, _) in enumerate(frequencies) if i not in cant_draw)
+        )) # type: ignore
 
         if plot_now:
             self.show()
@@ -834,7 +836,7 @@ class SemanticWordCloud:
             self.background_color
         )
         draw = ImageDraw.Draw(img)
-        for (word, _), font_size, position, orientation, color in self.layout_:
+        for (word, _), font_size, position, orientation, color, _ in self.layout_:
             font = ImageFont.truetype(self.font_path, int(font_size * self.scale))
             transposed_font = ImageFont.TransposedFont(font, orientation=orientation)
             pos = (int(position[1] * self.scale), int(position[0] * self.scale))
@@ -888,14 +890,16 @@ class SemanticWordCloud:
                     orientation,
                     color_func(
                         word = word_freq[0],
+                        frequency = frequency,
                         font_size = font_size,
                         position = position,
                         orientation = orientation,
                         random_state = random_state,
                         font_path = self.font_path
-                    )
+                    ),
+                    frequency
                 )
-                for word_freq, font_size, position, orientation, _ in self.layout_
+                for word_freq, font_size, position, orientation, _, frequency in self.layout_
             ]
 
         if plot_now:
@@ -1098,7 +1102,7 @@ class SemanticWordCloud:
             )
 
         # For each word in layout
-        for (word, _), font_size, (y, x), orientation, color in self.layout_:
+        for (word, _), font_size, (y, x), orientation, color, _ in self.layout_:
             x *= self.scale
             y *= self.scale
 
@@ -1113,7 +1117,7 @@ class SemanticWordCloud:
             max_y = ascent - offset_y
 
             # Compute text attributes
-            if orientation == Image.ROTATE_90:
+            if orientation == Image.Transpose.ROTATE_90:
                 x += max_y
                 y += max_x - min_x
                 transform = f'translate({x},{y}) rotate(-90)'

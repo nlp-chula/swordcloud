@@ -1,10 +1,9 @@
 import numpy as np
-from PIL import ImageFont
+from PIL import Image, ImageFont, ImageColor
 from numpy.typing import NDArray
 from random import Random
 import matplotlib
 from matplotlib.colors import Colormap
-from PIL import ImageColor
 from typing import Optional, Tuple, Dict, Any, Union, Callable, Iterable
 
 Color = Union[
@@ -52,7 +51,7 @@ class ImageColorFunc:
         word: str,
         font_size: int,
         position: Tuple[int, int],
-        orientation: Optional[int],
+        orientation: Optional[Image.Transpose],
         font_path: str,
         **kwargs: Any
     ):
@@ -61,7 +60,7 @@ class ImageColorFunc:
         font = ImageFont.truetype(font_path, font_size)
         transposed_font = ImageFont.TransposedFont(font, orientation=orientation)
         # get size of resulting text
-        box_size = transposed_font.getsize(word)
+        _, _, *box_size = transposed_font.getbbox(word)
         x = position[0]
         y = position[1]
         # cut out patch under word box
@@ -108,7 +107,7 @@ class ColorMapFunc:
         return f"rgb({r:.0f}, {g:.0f}, {b:.0f})"
 
 
-def SingleColorFunc(color: str):
+class SingleColorFunc:
     """
     Create a color function which returns a single hue and saturation with.
     different values (HSV). Accepted values are color strings as usable by
@@ -124,10 +123,14 @@ def SingleColorFunc(color: str):
     >>> color_func1 = SingleColorFunc('deepskyblue')
     >>> color_func2 = SingleColorFunc('#00b4d2')
     """
-    r, g, b, *_ = ImageColor.getrgb(color)
-    def single_color_func(**kwargs: Any):
-        return f"rgb({r:.0f}, {g:.0f}, {b:.0f})"
-    return single_color_func
+    def __init__(self, color: str):
+        r, g, b, *_ = ImageColor.getrgb(color)
+        self.r = r
+        self.g = g
+        self.b = b
+
+    def __call__(self, **kwargs: Any):
+        return f"rgb({self.r}, {self.g}, {self.b})"
 
 class ExactColorFunc:
     """
@@ -156,6 +159,18 @@ class ExactColorFunc:
     def __call__(self, word: str, **kwargs: Any):
         return self.word_to_color.get(word, self.default_color)
 
+class FrequencyColorFunc:
+    """
+    Assign colors based on word frequencies.
+    Less frequent words will have lighter colors.
+    """
+    def __init__(self, base_color: str, scaling: float = 1.5):
+        self.r, self.g, self.b, *_ = ImageColor.getrgb(base_color)
+        self.scaling = scaling
+
+    def __call__(self, frequency: float, **kwargs: Any):
+        return f"rgb({int(self.r + (255 - self.r) * (1 - frequency) / self.scaling)}, {int(self.g + (255 - self.g) * (1 - frequency) / self.scaling)}, {int(self.b + (255 - self.b) * (1 - frequency) / self.scaling)})"
+
 def RandomColorFunc(
     random_state: Random,
     **kwargs: Any
@@ -166,4 +181,4 @@ def RandomColorFunc(
     Default coloring method. This just picks a random hue with value 80% and
     lumination 50%.
     """
-    return "hsl(%d, 80%%, 50%%)" % random_state.randint(0, 255)
+    return "hsl(%d, 80%%, 50%%)" % random_state.randint(0, 360)
