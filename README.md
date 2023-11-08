@@ -92,7 +92,7 @@ wordcloud.generate_kmeans_cloud(freq, n_clusters=6, random_state=42, plot_now=Fa
 for cloud, color in zip(wordcloud.sub_clouds, ["red", "blue", "brown", "green", "black", "orange"]):
     cloud.recolor(FrequencyColorFunc(color), plot_now=False)
 
-cloud.show()
+wordcloud.show()
 ```
 ||||
 -|-|-
