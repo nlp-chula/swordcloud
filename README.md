@@ -1,4 +1,4 @@
-# **swordcloud**
+# **Semantic Word Cloud for Thai and English**
 `swordcloud`: A semantic word cloud generator that uses t-SNE and k-means clustering to visualize words in high-dimensional semantic space. Based on [A. Mueller's `wordcloud` module](https://github.com/amueller/word_cloud), `swordcloud` can generate semantic word clouds from Thai and English texts based on any word vector models.
 
 ## **Content**
